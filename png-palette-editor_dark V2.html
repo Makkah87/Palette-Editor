@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PNG Palette Editor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#111;font-family:system-ui,sans-serif;font-size:14px;color:#e2e2e2}
+#app{display:flex;flex-direction:column;height:100vh}
+#toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #2e2e2e;flex-shrink:0;flex-wrap:wrap;background:#1a1a1a}
+#main{display:flex;flex:1;overflow:hidden;min-height:0}
+#img-panel{flex:1;display:flex;flex-direction:column;border-right:1px solid #2e2e2e;min-width:0}
+#pal-panel{width:270px;display:flex;flex-direction:column;background:#1e1e1e;flex-shrink:0}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid #2e2e2e;flex-shrink:0;background:#161616}
+.panel-header span{font-size:12px;font-weight:500;color:#888}
+.zoom-ctrl{display:flex;align-items:center;gap:4px}
+.zoom-ctrl button{width:22px;height:22px;border:1px solid #3a3a3a;background:#242424;border-radius:5px;cursor:pointer;font-size:15px;line-height:1;color:#ccc}
+.zoom-ctrl button:hover{background:#333}
+.zoom-ctrl span{font-size:11px;color:#666;min-width:38px;text-align:center}
+#img-viewport{flex:1;overflow:auto;position:relative;cursor:crosshair;background:repeating-conic-gradient(#2a2a2a 0% 25%,#1e1e1e 0% 50%) 0 0/20px 20px;min-height:0}
+#img-canvas-wrap{display:inline-block;transform-origin:top left}
+canvas{display:block;image-rendering:pixelated}
+#pal-list{flex:1;overflow-y:auto;padding:6px;min-height:0;scrollbar-width:thin;scrollbar-color:#333 transparent}
+.swatch{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;border:1.5px solid transparent;margin-bottom:2px}
+.swatch:hover{background:#2a2a2a}
+.swatch.active{border-color:#666;background:#252525}
+.swatch.hl{box-shadow:0 0 0 2px #5b9cf6}
+.sw-color{width:28px;height:28px;border-radius:4px;border:1px solid #333;flex-shrink:0}
+.sw-hex{font-size:12px;font-weight:600;font-family:monospace;color:#ddd}
+.sw-rgb{font-size:11px;color:#666;font-family:monospace}
+.sw-idx{font-size:11px;color:#444;min-width:26px;text-align:right;flex-shrink:0}
+#editor{flex-shrink:0;border-top:1px solid #2e2e2e;padding:10px;background:#161616;display:none;flex-direction:column;gap:8px}
+#editor.open{display:flex}
+.erow{display:flex;align-items:center;gap:8px}
+.erow label{font-size:12px;color:#666;width:34px;flex-shrink:0}
+.erow input[type=text]{flex:1;font-size:12px;font-family:monospace;padding:4px 7px;border:1px solid #3a3a3a;border-radius:5px;background:#242424;color:#e2e2e2;outline:none}
+.erow input[type=text]:focus{border-color:#555}
+.rgb-row{display:flex;gap:6px}
+.rgb-ch{display:flex;flex-direction:column;gap:3px;flex:1;align-items:center}
+.rgb-ch label{font-size:10px;color:#666}
+.rgb-ch input{width:100%;font-size:12px;font-family:monospace;padding:3px 4px;border:1px solid #3a3a3a;border-radius:5px;background:#242424;color:#e2e2e2;text-align:center;outline:none}
+.rgb-ch input:focus{border-color:#555}
+#preview{width:40px;height:40px;border-radius:6px;border:1px solid #333;flex-shrink:0}
+.btn{padding:5px 11px;border:1px solid #3a3a3a;border-radius:5px;background:#242424;cursor:pointer;font-size:12px;color:#ccc}
+.btn:hover{background:#2e2e2e;color:#eee}
+.btn:disabled{opacity:0.4;cursor:default}
+.btn-p{background:#454545;color:#f0f0f0;border-color:#555}
+.btn-p:hover{background:#555}
+#no-img{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;height:100%;color:#555;pointer-events:none}
+#no-img button{pointer-events:all}
+input[type=checkbox]{accent-color:#5b9cf6;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="toolbar">
+    <button class="btn btn-p" id="openBtn">Open PNG</button>
+    <input type="file" id="fileInput" accept=".png,image/png" style="display:none">
+    <div style="width:1px;height:20px;background:#2e2e2e"></div>
+    <button class="btn" id="saveImgBtn" disabled>Save PNG</button>
+    <button class="btn" id="saveActBtn" disabled>Save .ACT Palette</button>
+    <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#666;cursor:pointer;margin-left:4px">
+      <input type="checkbox" id="reverseAct"> Reverse order
+    </label>
+  </div>
+  <div id="main">
+    <div id="img-panel">
+      <div class="panel-header">
+        <span>Image</span>
+        <div class="zoom-ctrl">
+          <button id="iZoomOut">−</button>
+          <span id="iZoomLbl">100%</span>
+          <button id="iZoomIn">+</button>
+          <button id="iZoomFit" style="font-size:11px;width:auto;padding:0 6px">fit</button>
+        </div>
+      </div>
+      <div id="img-viewport">
+        <div id="no-img">
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+          <span style="font-size:13px">Open a PNG to get started</span>
+          <button class="btn btn-p" id="openBtn2">Choose file</button>
+        </div>
+        <div id="img-canvas-wrap" style="display:none"><canvas id="cv"></canvas></div>
+      </div>
+    </div>
+    <div id="pal-panel">
+      <div class="panel-header">
+        <span id="palTitle">Palette</span>
+        <div class="zoom-ctrl">
+          <button id="pZoomOut">−</button>
+          <span id="pZoomLbl">100%</span>
+          <button id="pZoomIn">+</button>
+        </div>
+      </div>
+      <div id="pal-list"></div>
+      <div id="editor">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div id="preview"></div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:#555;margin-bottom:4px">Selected color</div>
+            <div class="erow" style="margin:0">
+              <label>Hex</label>
+              <input type="text" id="hexIn" maxlength="7" placeholder="#RRGGBB">
+            </div>
+          </div>
+        </div>
+        <div class="rgb-row">
+          <div class="rgb-ch"><label>R</label><input type="number" id="rIn" min="0" max="255"></div>
+          <div class="rgb-ch"><label>G</label><input type="number" id="gIn" min="0" max="255"></div>
+          <div class="rgb-ch"><label>B</label><input type="number" id="bIn" min="0" max="255"></div>
+        </div>
+        <div class="erow">
+          <label style="width:auto;font-size:11px;color:#555">Pick:</label>
+          <input type="color" id="cpick" style="width:36px;height:28px;border:1px solid #3a3a3a;border-radius:5px;cursor:pointer;padding:2px;background:#242424">
+          <button class="btn btn-p" id="applyBtn" style="margin-left:auto">Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  let wd=null,pal=[],selIdx=-1,hlIdx=-1,iZoom=1,pZoom=1;
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+  const vp=document.getElementById('img-viewport'),cw=document.getElementById('img-canvas-wrap');
+  const noImg=document.getElementById('no-img'),palList=document.getElementById('pal-list');
+  const ed=document.getElementById('editor');
+  const hexIn=document.getElementById('hexIn'),rIn=document.getElementById('rIn'),gIn=document.getElementById('gIn'),bIn=document.getElementById('bIn');
+  const cpick=document.getElementById('cpick'),prev=document.getElementById('preview');
+  const iZoomLbl=document.getElementById('iZoomLbl'),pZoomLbl=document.getElementById('pZoomLbl');
+
+  const h2=v=>v.toString(16).padStart(2,'0').toUpperCase();
+  const rgb2hex=(r,g,b)=>'#'+h2(r)+h2(g)+h2(b);
+  const hex2rgb=h=>{h=h.replace('#','');if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]};
+
+  function extractPal(id){
+    const d=id.data,map=new Map(),ord=[];
+    for(let i=0;i<d.length;i+=4){
+      const k=(d[i]<<16)|(d[i+1]<<8)|d[i+2];
+      if(!map.has(k)){map.set(k,{r:d[i],g:d[i+1],b:d[i+2]});ord.push(k)}
+    }
+    return ord.map(k=>map.get(k));
+  }
+
+  function loadFile(file){
+    const url=URL.createObjectURL(file),img=new Image();
+    img.onload=()=>{
+      cv.width=img.width;cv.height=img.height;
+      ctx.drawImage(img,0,0);
+      wd=new ImageData(new Uint8ClampedArray(ctx.getImageData(0,0,img.width,img.height).data),img.width,img.height);
+      pal=extractPal(wd);selIdx=-1;hlIdx=-1;
+      renderPal();noImg.style.display='none';cw.style.display='inline-block';
+      setIZ(Math.min(vp.clientWidth/cv.width,vp.clientHeight/cv.height,1));
+      document.getElementById('saveImgBtn').disabled=false;
+      document.getElementById('saveActBtn').disabled=false;
+      document.getElementById('palTitle').textContent='Palette ('+pal.length+')';
+      URL.revokeObjectURL(url);
+    };
+    img.src=url;
+  }
+
+  function renderPal(){
+    palList.innerHTML='';
+    pal.forEach((c,i)=>{
+      const d=document.createElement('div');
+      d.className='swatch'+(i===selIdx?' active':'')+(i===hlIdx&&i!==selIdx?' hl':'');
+      if(pZoom!==1){d.style.transform='scale('+pZoom+')';d.style.transformOrigin='top left';d.style.marginBottom=(2+(pZoom-1)*38)+'px';}
+      const hex=rgb2hex(c.r,c.g,c.b);
+      d.innerHTML='<div class="sw-color" style="background:'+hex+'"></div>'
+        +'<div style="flex:1;min-width:0"><div class="sw-hex">'+hex+'</div><div class="sw-rgb">rgb('+c.r+','+c.g+','+c.b+')</div></div>'
+        +'<div class="sw-idx">#'+i+'</div>';
+      d.addEventListener('click',()=>selColor(i));
+      d.addEventListener('mouseenter',()=>hlColor(i));
+      d.addEventListener('mouseleave',()=>hlColor(-1));
+      palList.appendChild(d);
+    });
+  }
+
+  function hlColor(i){hlIdx=i;renderCv();document.querySelectorAll('.swatch').forEach((el,j)=>el.classList.toggle('hl',j===i&&i!==selIdx));}
+
+  function selColor(i){
+    selIdx=i;renderPal();renderCv();
+    if(i>=0){
+      const c=pal[i],hex=rgb2hex(c.r,c.g,c.b);
+      hexIn.value=hex;rIn.value=c.r;gIn.value=c.g;bIn.value=c.b;cpick.value=hex;prev.style.background=hex;
+      ed.classList.add('open');
+      const el=palList.children[i];if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'});
+    } else ed.classList.remove('open');
+  }
+
+  function renderCv(){
+    if(!wd)return;
+    const disp=new ImageData(new Uint8ClampedArray(wd.data),wd.width,wd.height),dd=disp.data;
+    const ai=hlIdx>=0?hlIdx:selIdx;
+    if(ai>=0){
+      const ac=pal[ai];
+      for(let i=0;i<dd.length;i+=4)
+        if(dd[i]===ac.r&&dd[i+1]===ac.g&&dd[i+2]===ac.b){dd[i]=Math.min(255,dd[i]+80);dd[i+1]=Math.min(255,dd[i+1]+80);dd[i+2]=Math.min(255,dd[i+2]+80);}
+    }
+    ctx.putImageData(disp,0,0);
+  }
+
+  function applyChange(r,g,b){
+    if(selIdx<0)return;
+    const oc=pal[selIdx],d=wd.data;
+    for(let i=0;i<d.length;i+=4)if(d[i]===oc.r&&d[i+1]===oc.g&&d[i+2]===oc.b){d[i]=r;d[i+1]=g;d[i+2]=b;}
+    pal[selIdx]={r,g,b};
+    const hex=rgb2hex(r,g,b);
+    hexIn.value=hex;rIn.value=r;gIn.value=g;bIn.value=b;cpick.value=hex;prev.style.background=hex;
+    renderCv();
+    const el=palList.children[selIdx];
+    if(el){el.querySelector('.sw-color').style.background=hex;el.querySelector('.sw-hex').textContent=hex;el.querySelector('.sw-rgb').textContent='rgb('+r+','+g+','+b+')';}
+  }
+
+  document.getElementById('applyBtn').addEventListener('click',()=>
+    applyChange(Math.max(0,Math.min(255,+rIn.value||0)),Math.max(0,Math.min(255,+gIn.value||0)),Math.max(0,Math.min(255,+bIn.value||0))));
+
+  hexIn.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){let h=hexIn.value.trim();if(!h.startsWith('#'))h='#'+h;
+      if(/^#[0-9a-fA-F]{6}$/.test(h)){const[r,g,b]=hex2rgb(h);rIn.value=r;gIn.value=g;bIn.value=b;applyChange(r,g,b);}}
+  });
+  cpick.addEventListener('input',()=>{
+    const[r,g,b]=hex2rgb(cpick.value);rIn.value=r;gIn.value=g;bIn.value=b;
+    hexIn.value=cpick.value.toUpperCase();prev.style.background=cpick.value;applyChange(r,g,b);
+  });
+  [rIn,gIn,bIn].forEach(inp=>inp.addEventListener('input',()=>{
+    const r=+rIn.value||0,g=+gIn.value||0,b=+bIn.value||0,hex=rgb2hex(r,g,b);
+    hexIn.value=hex;cpick.value=hex;prev.style.background=hex;
+  }));
+
+  cv.addEventListener('click',e=>{
+    if(!wd)return;
+    const rc=cv.getBoundingClientRect(),x=Math.floor((e.clientX-rc.left)/iZoom),y=Math.floor((e.clientY-rc.top)/iZoom);
+    if(x<0||y<0||x>=cv.width||y>=cv.height)return;
+    const i=(y*cv.width+x)*4;
+    selColor(pal.findIndex(c=>c.r===wd.data[i]&&c.g===wd.data[i+1]&&c.b===wd.data[i+2]));
+  });
+  cv.addEventListener('mousemove',e=>{
+    if(!wd)return;
+    const rc=cv.getBoundingClientRect(),x=Math.floor((e.clientX-rc.left)/iZoom),y=Math.floor((e.clientY-rc.top)/iZoom);
+    if(x<0||y<0||x>=cv.width||y>=cv.height){hlColor(-1);return;}
+    const i=(y*cv.width+x)*4;
+    hlColor(pal.findIndex(c=>c.r===wd.data[i]&&c.g===wd.data[i+1]&&c.b===wd.data[i+2]));
+  });
+  cv.addEventListener('mouseleave',()=>hlColor(-1));
+
+  function setIZ(z){
+    iZoom=Math.max(0.05,Math.min(32,z));
+    cw.style.transform='scale('+iZoom+')';cw.style.transformOrigin='top left';
+    cw.style.marginBottom=((cv.height*iZoom)-cv.height)+'px';
+    cw.style.marginRight=((cv.width*iZoom)-cv.width)+'px';
+    iZoomLbl.textContent=Math.round(iZoom*100)+'%';
+  }
+  function setPZ(z){pZoom=Math.max(0.5,Math.min(2,z));pZoomLbl.textContent=Math.round(pZoom*100)+'%';renderPal();}
+
+  document.getElementById('iZoomIn').addEventListener('click',()=>setIZ(iZoom*1.25));
+  document.getElementById('iZoomOut').addEventListener('click',()=>setIZ(iZoom/1.25));
+  document.getElementById('iZoomFit').addEventListener('click',()=>{if(wd)setIZ(Math.min(vp.clientWidth/cv.width,vp.clientHeight/cv.height,1));});
+  document.getElementById('pZoomIn').addEventListener('click',()=>setPZ(pZoom+0.25));
+  document.getElementById('pZoomOut').addEventListener('click',()=>setPZ(pZoom-0.25));
+
+  const openFile=()=>document.getElementById('fileInput').click();
+  document.getElementById('openBtn').addEventListener('click',openFile);
+  document.getElementById('openBtn2').addEventListener('click',openFile);
+  document.getElementById('fileInput').addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0]);e.target.value='';});
+
+  document.getElementById('saveImgBtn').addEventListener('click',()=>{
+    if(!wd)return;ctx.putImageData(wd,0,0);
+    const a=document.createElement('a');a.download='edited.png';a.href=cv.toDataURL('image/png');a.click();renderCv();
+  });
+  document.getElementById('saveActBtn').addEventListener('click',()=>{
+    if(!pal.length)return;
+    let cols=[...pal];if(document.getElementById('reverseAct').checked)cols.reverse();
+    const buf=new Uint8Array(768),n=Math.min(256,cols.length);
+    for(let i=0;i<n;i++){buf[i*3]=cols[i].r;buf[i*3+1]=cols[i].g;buf[i*3+2]=cols[i].b;}
+    const a=document.createElement('a');a.download='palette.act';
+    a.href=URL.createObjectURL(new Blob([buf],{type:'application/octet-stream'}));a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+  });
+
+  vp.addEventListener('wheel',e=>{if(!wd)return;e.preventDefault();setIZ(iZoom*(e.deltaY>0?0.9:1.1));},{passive:false});
+})();
+</script>
+</body>
+</html>
