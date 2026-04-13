@@ -1,285 +1,680 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PNG Palette Editor</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;background:#111;font-family:system-ui,sans-serif;font-size:14px;color:#e2e2e2}
-#app{display:flex;flex-direction:column;height:100vh}
-#toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #2e2e2e;flex-shrink:0;flex-wrap:wrap;background:#1a1a1a}
-#main{display:flex;flex:1;overflow:hidden;min-height:0}
-#img-panel{flex:1;display:flex;flex-direction:column;border-right:1px solid #2e2e2e;min-width:0}
-#pal-panel{width:270px;display:flex;flex-direction:column;background:#1e1e1e;flex-shrink:0}
-.panel-header{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid #2e2e2e;flex-shrink:0;background:#161616}
-.panel-header span{font-size:12px;font-weight:500;color:#888}
-.zoom-ctrl{display:flex;align-items:center;gap:4px}
-.zoom-ctrl button{width:22px;height:22px;border:1px solid #3a3a3a;background:#242424;border-radius:5px;cursor:pointer;font-size:15px;line-height:1;color:#ccc}
-.zoom-ctrl button:hover{background:#333}
-.zoom-ctrl span{font-size:11px;color:#666;min-width:38px;text-align:center}
-#img-viewport{flex:1;overflow:auto;position:relative;cursor:crosshair;background:repeating-conic-gradient(#2a2a2a 0% 25%,#1e1e1e 0% 50%) 0 0/20px 20px;min-height:0}
-#img-canvas-wrap{display:inline-block;transform-origin:top left}
-canvas{display:block;image-rendering:pixelated}
-#pal-list{flex:1;overflow-y:auto;padding:6px;min-height:0;scrollbar-width:thin;scrollbar-color:#333 transparent}
-.swatch{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;border:1.5px solid transparent;margin-bottom:2px}
-.swatch:hover{background:#2a2a2a}
-.swatch.active{border-color:#666;background:#252525}
-.swatch.hl{box-shadow:0 0 0 2px #5b9cf6}
-.sw-color{width:28px;height:28px;border-radius:4px;border:1px solid #333;flex-shrink:0}
-.sw-hex{font-size:12px;font-weight:600;font-family:monospace;color:#ddd}
-.sw-rgb{font-size:11px;color:#666;font-family:monospace}
-.sw-idx{font-size:11px;color:#444;min-width:26px;text-align:right;flex-shrink:0}
-#editor{flex-shrink:0;border-top:1px solid #2e2e2e;padding:10px;background:#161616;display:none;flex-direction:column;gap:8px}
-#editor.open{display:flex}
-.erow{display:flex;align-items:center;gap:8px}
-.erow label{font-size:12px;color:#666;width:34px;flex-shrink:0}
-.erow input[type=text]{flex:1;font-size:12px;font-family:monospace;padding:4px 7px;border:1px solid #3a3a3a;border-radius:5px;background:#242424;color:#e2e2e2;outline:none}
-.erow input[type=text]:focus{border-color:#555}
-.rgb-row{display:flex;gap:6px}
-.rgb-ch{display:flex;flex-direction:column;gap:3px;flex:1;align-items:center}
-.rgb-ch label{font-size:10px;color:#666}
-.rgb-ch input{width:100%;font-size:12px;font-family:monospace;padding:3px 4px;border:1px solid #3a3a3a;border-radius:5px;background:#242424;color:#e2e2e2;text-align:center;outline:none}
-.rgb-ch input:focus{border-color:#555}
-#preview{width:40px;height:40px;border-radius:6px;border:1px solid #333;flex-shrink:0}
-.btn{padding:5px 11px;border:1px solid #3a3a3a;border-radius:5px;background:#242424;cursor:pointer;font-size:12px;color:#ccc}
-.btn:hover{background:#2e2e2e;color:#eee}
-.btn:disabled{opacity:0.4;cursor:default}
-.btn-p{background:#454545;color:#f0f0f0;border-color:#555}
-.btn-p:hover{background:#555}
-#no-img{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;height:100%;color:#555;pointer-events:none}
-#no-img button{pointer-events:all}
-input[type=checkbox]{accent-color:#5b9cf6;cursor:pointer}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: #1a1a1a;
+    color: #d4d4d4;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* ── Toolbar ── */
+  #toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: #252525;
+    border-bottom: 1px solid #3a3a3a;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  #toolbar button, #toolbar label {
+    padding: 4px 10px;
+    background: #333;
+    border: 1px solid #4a4a4a;
+    color: #d4d4d4;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  #toolbar button:hover, #toolbar label:hover { background: #444; }
+  #toolbar button:disabled { opacity: 0.4; cursor: default; }
+
+  #toolbar .sep { width: 1px; height: 20px; background: #3a3a3a; margin: 0 2px; }
+
+  #status {
+    flex: 1;
+    font-size: 11px;
+    color: #888;
+    padding-left: 6px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #reverse-wrap {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #aaa;
+    white-space: nowrap;
+  }
+
+  /* ── Main area ── */
+  #main {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ── Image panel ── */
+  #img-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-right: 1px solid #3a3a3a;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    background: #222;
+    border-bottom: 1px solid #3a3a3a;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #888;
+  }
+  .panel-header span { flex: 1; }
+  .panel-header button {
+    padding: 2px 8px;
+    background: #333;
+    border: 1px solid #4a4a4a;
+    color: #d4d4d4;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+  }
+  .panel-header button:hover { background: #444; }
+
+  #img-viewport {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    background: #111;
+    cursor: crosshair;
+    min-height: 0;
+  }
+
+  #img-viewport canvas {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    transform-origin: top left;
+  }
+
+  /* ── Palette panel ── */
+  #pal-panel {
+    width: 280px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  #pal-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-height: 0;
+  }
+
+  .swatch-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.1s;
+  }
+  .swatch-row:hover { background: #2c2c2c; }
+  .swatch-row.active { background: #2c3a4a; border-color: #4a7acc; }
+  .swatch-row.highlighted { outline: 2px solid #f5a623; outline-offset: -1px; }
+
+  .swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+    transition: transform 0.1s;
+  }
+  .swatch-row:hover .swatch { transform: scale(1.1); }
+
+  .swatch-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .swatch-hex { font-family: monospace; font-size: 12px; color: #ccc; }
+  .swatch-rgb { font-size: 10px; color: #777; margin-top: 1px; }
+  .swatch-idx { font-size: 10px; color: #555; }
+
+  /* ── Editor panel ── */
+  #editor {
+    border-top: 1px solid #3a3a3a;
+    padding: 10px;
+    background: #202020;
+    flex-shrink: 0;
+  }
+
+  #editor.hidden { display: none; }
+
+  #editor h3 {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #ed-preview {
+    width: 24px;
+    height: 24px;
+    border-radius: 3px;
+    border: 1px solid #555;
+    flex-shrink: 0;
+  }
+
+  .ed-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .ed-label {
+    width: 32px;
+    font-size: 11px;
+    color: #888;
+    flex-shrink: 0;
+  }
+
+  .ed-row input[type="text"],
+  .ed-row input[type="number"] {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    color: #d4d4d4;
+    border-radius: 3px;
+    padding: 3px 6px;
+    font-size: 12px;
+    font-family: monospace;
+  }
+
+  .ed-row input[type="text"] { width: 90px; }
+  .ed-row input[type="number"] { width: 52px; }
+
+  .ed-row input[type="color"] {
+    width: 36px;
+    height: 26px;
+    padding: 1px;
+    border: 1px solid #444;
+    border-radius: 3px;
+    background: #2a2a2a;
+    cursor: pointer;
+  }
+
+  .ed-row input:focus {
+    outline: none;
+    border-color: #4a7acc;
+  }
+
+  #ed-apply {
+    padding: 3px 12px;
+    background: #4a7acc;
+    border: none;
+    color: #fff;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  #ed-apply:hover { background: #5a8adc; }
+
+  /* ── Scrollbar styling ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #1a1a1a; }
+  ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+  /* ── Drop zone ── */
+  #drop-zone {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    font-size: 16px;
+    pointer-events: none;
+    user-select: none;
+  }
+  #drop-zone.active { color: #4a7acc; border: 2px dashed #4a7acc; background: rgba(74,122,204,0.05); }
+  #drop-zone svg { margin-bottom: 12px; opacity: 0.4; }
+
+  #pixel-info {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    background: rgba(0,0,0,0.7);
+    color: #ccc;
+    font-size: 10px;
+    font-family: monospace;
+    padding: 3px 7px;
+    border-radius: 3px;
+    pointer-events: none;
+    display: none;
+  }
 </style>
 </head>
 <body>
 <div id="app">
+
+  <!-- Toolbar -->
   <div id="toolbar">
-    <button class="btn btn-p" id="openBtn">Open PNG</button>
-    <input type="file" id="fileInput" accept=".png,image/png" style="display:none">
-    <div style="width:1px;height:20px;background:#2e2e2e"></div>
-    <button class="btn" id="saveImgBtn" disabled>Save PNG</button>
-    <button class="btn" id="saveActBtn" disabled>Save .ACT Palette</button>
-    <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#666;cursor:pointer;margin-left:4px">
-      <input type="checkbox" id="reverseAct"> Reverse order
+    <label id="open-btn">
+      📂 Open PNG
+      <input type="file" id="file-input" accept=".png,image/png" style="display:none">
     </label>
+    <div class="sep"></div>
+    <button id="save-png-btn" disabled>💾 Save PNG</button>
+    <button id="save-act-btn" disabled>🎨 Save .ACT</button>
+    <div id="reverse-wrap">
+      <input type="checkbox" id="reverse-chk">
+      <label for="reverse-chk" style="background:none;border:none;padding:0;cursor:pointer;">Reverse order</label>
+    </div>
+    <div class="sep"></div>
+    <span id="status">Open a PNG file to begin.</span>
   </div>
+
+  <!-- Main -->
   <div id="main">
+
+    <!-- Image panel -->
     <div id="img-panel">
       <div class="panel-header">
-        <span>Image</span>
-        <div class="zoom-ctrl">
-          <button id="iZoomOut">−</button>
-          <span id="iZoomLbl">100%</span>
-          <button id="iZoomIn">+</button>
-          <button id="iZoomFit" style="font-size:11px;width:auto;padding:0 6px">fit</button>
-        </div>
+        <span id="img-label">Image</span>
+        <button id="img-zoom-out">−</button>
+        <button id="img-fit">fit</button>
+        <button id="img-zoom-in">+</button>
+        <button id="img-zoom-1">1x</button>
       </div>
       <div id="img-viewport">
-        <div id="no-img">
-          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
-          <span style="font-size:13px">Open a PNG to get started</span>
-          <button class="btn btn-p" id="openBtn2">Choose file</button>
+        <canvas id="canvas"></canvas>
+        <div id="drop-zone">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          Drop PNG here or click Open PNG
         </div>
-        <div id="img-canvas-wrap" style="display:none"><canvas id="cv"></canvas></div>
+        <div id="pixel-info"></div>
       </div>
     </div>
+
+    <!-- Palette panel -->
     <div id="pal-panel">
       <div class="panel-header">
-        <span id="palTitle">Palette</span>
-        <div class="zoom-ctrl">
-          <button id="pZoomOut">−</button>
-          <span id="pZoomLbl">100%</span>
-          <button id="pZoomIn">+</button>
-        </div>
+        <span id="pal-label">Palette</span>
+        <button id="pal-zoom-out">−</button>
+        <button id="pal-zoom-in">+</button>
       </div>
-      <div id="pal-list"></div>
-      <div id="editor">
-        <div style="display:flex;align-items:center;gap:9px">
-          <div id="preview"></div>
-          <div style="flex:1">
-            <div style="font-size:11px;color:#555;margin-bottom:4px">Selected color</div>
-            <div class="erow" style="margin:0">
-              <label>Hex</label>
-              <input type="text" id="hexIn" maxlength="7" placeholder="#RRGGBB">
-            </div>
-          </div>
+      <div id="pal-list">
+        <div style="color:#555;text-align:center;margin-top:30px;font-size:12px;">No palette loaded</div>
+      </div>
+
+      <!-- Color editor -->
+      <div id="editor" class="hidden">
+        <h3>
+          <div id="ed-preview"></div>
+          <span id="ed-title">Edit Color</span>
+        </h3>
+        <div class="ed-row">
+          <span class="ed-label">Hex</span>
+          <input type="text" id="ed-hex" maxlength="7" placeholder="#rrggbb">
+          <input type="color" id="ed-picker">
         </div>
-        <div class="rgb-row">
-          <div class="rgb-ch"><label>R</label><input type="number" id="rIn" min="0" max="255"></div>
-          <div class="rgb-ch"><label>G</label><input type="number" id="gIn" min="0" max="255"></div>
-          <div class="rgb-ch"><label>B</label><input type="number" id="bIn" min="0" max="255"></div>
-        </div>
-        <div class="erow">
-          <label style="width:auto;font-size:11px;color:#555">Pick:</label>
-          <input type="color" id="cpick" style="width:36px;height:28px;border:1px solid #3a3a3a;border-radius:5px;cursor:pointer;padding:2px;background:#242424">
-          <button class="btn btn-p" id="applyBtn" style="margin-left:auto">Apply</button>
+        <div class="ed-row">
+          <span class="ed-label">R</span>
+          <input type="number" id="ed-r" min="0" max="255">
+          <span class="ed-label" style="width:auto">G</span>
+          <input type="number" id="ed-g" min="0" max="255">
+          <span class="ed-label" style="width:auto">B</span>
+          <input type="number" id="ed-b" min="0" max="255">
+          <button id="ed-apply">Apply</button>
         </div>
       </div>
     </div>
+
   </div>
 </div>
+
 <script>
-(function(){
-  let wd=null,pal=[],selIdx=-1,hlIdx=-1,iZoom=1,pZoom=1;
-  const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
-  const vp=document.getElementById('img-viewport'),cw=document.getElementById('img-canvas-wrap');
-  const noImg=document.getElementById('no-img'),palList=document.getElementById('pal-list');
-  const ed=document.getElementById('editor');
-  const hexIn=document.getElementById('hexIn'),rIn=document.getElementById('rIn'),gIn=document.getElementById('gIn'),bIn=document.getElementById('bIn');
-  const cpick=document.getElementById('cpick'),prev=document.getElementById('preview');
-  const iZoomLbl=document.getElementById('iZoomLbl'),pZoomLbl=document.getElementById('pZoomLbl');
+let pal = [];
+let indexMap = null;
+let imgW = 0, imgH = 0;
+let originalFilename = 'image';
+let imgZoom = 1;
+let palSwatchSize = 28;
+let selectedSlot = null;
+let hoveredSlot  = null;
 
-  const h2=v=>v.toString(16).padStart(2,'0').toUpperCase();
-  const rgb2hex=(r,g,b)=>'#'+h2(r)+h2(g)+h2(b);
-  const hex2rgb=h=>{h=h.replace('#','');if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]};
+const fileInput   = document.getElementById('file-input');
+const canvas      = document.getElementById('canvas');
+const ctx         = canvas.getContext('2d');
+const imgVP       = document.getElementById('img-viewport');
+const dropZone    = document.getElementById('drop-zone');
+const pixelInfo   = document.getElementById('pixel-info');
+const palList     = document.getElementById('pal-list');
+const editor      = document.getElementById('editor');
+const edTitle     = document.getElementById('ed-title');
+const edPreview   = document.getElementById('ed-preview');
+const edHex       = document.getElementById('ed-hex');
+const edPicker    = document.getElementById('ed-picker');
+const edR         = document.getElementById('ed-r');
+const edG         = document.getElementById('ed-g');
+const edB         = document.getElementById('ed-b');
+const edApply     = document.getElementById('ed-apply');
+const status      = document.getElementById('status');
+const palLabel    = document.getElementById('pal-label');
+const imgLabel    = document.getElementById('img-label');
+const savePngBtn  = document.getElementById('save-png-btn');
+const saveActBtn  = document.getElementById('save-act-btn');
+const reverseChk  = document.getElementById('reverse-chk');
 
-  function extractPal(id){
-    const d=id.data,map=new Map(),ord=[];
-    for(let i=0;i<d.length;i+=4){
-      const k=(d[i]<<16)|(d[i+1]<<8)|d[i+2];
-      if(!map.has(k)){map.set(k,{r:d[i],g:d[i+1],b:d[i+2]});ord.push(k)}
+async function parsePNG(file) {
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  const sig = [137,80,78,71,13,10,26,10];
+  for (let i = 0; i < 8; i++) if (bytes[i] !== sig[i]) throw new Error('Not a valid PNG file.');
+  let pos = 8, width = 0, height = 0, bitDepth = 0, colorType = 0;
+  let plte = [], idatChunks = [], trns = null;
+  function read32(p) { return (bytes[p]<<24|bytes[p+1]<<16|bytes[p+2]<<8|bytes[p+3])>>>0; }
+  while (pos < bytes.length - 4) {
+    const length = read32(pos); pos += 4;
+    const type = String.fromCharCode(bytes[pos],bytes[pos+1],bytes[pos+2],bytes[pos+3]);
+    pos += 4;
+    const data = bytes.slice(pos, pos + length); pos += length; pos += 4;
+    if (type === 'IHDR') {
+      width=(data[0]<<24|data[1]<<16|data[2]<<8|data[3])>>>0;
+      height=(data[4]<<24|data[5]<<16|data[6]<<8|data[7])>>>0;
+      bitDepth=data[8]; colorType=data[9];
+    } else if (type === 'PLTE') {
+      for (let i = 0; i < data.length; i += 3) plte.push({r:data[i],g:data[i+1],b:data[i+2]});
+    } else if (type === 'tRNS') { trns = data;
+    } else if (type === 'IDAT') { idatChunks.push(data);
+    } else if (type === 'IEND') { break; }
+  }
+  return { width, height, bitDepth, colorType, plte, idatChunks, trns };
+}
+
+// KEY FIX: use 'deflate-raw' instead of 'deflate'
+// PNG IDAT data is zlib-wrapped deflate; DecompressionStream('deflate') expects
+// raw deflate with no header, so we must use 'deflate-raw' and skip the 2-byte
+// zlib header (0x78 0x9C) ourselves.
+async function decompressIDAT(chunks) {
+  const total = chunks.reduce((s,c)=>s+c.length,0);
+  const combined = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) { combined.set(c, off); off += c.length; }
+
+  // Skip the 2-byte zlib header (CMF + FLG) and strip the 4-byte Adler-32 trailer
+  // so that DecompressionStream('deflate-raw') gets clean raw deflate data.
+  const rawDeflate = combined.slice(2, combined.length - 4);
+
+  const ds = new DecompressionStream('deflate-raw');
+  const writer = ds.writable.getWriter();
+  writer.write(rawDeflate);
+  writer.close();
+  const reader = ds.readable.getReader();
+  const parts = [];
+  while (true) { const {done,value} = await reader.read(); if (done) break; parts.push(value); }
+  const out = new Uint8Array(parts.reduce((s,p)=>s+p.length,0));
+  let o = 0; for (const p of parts) { out.set(p,o); o+=p.length; }
+  return out;
+}
+
+function unfilter(raw, width, height, bitDepth, channels) {
+  const stride = Math.ceil(width * bitDepth * channels / 8);
+  const out = new Uint8Array(height * stride);
+  function paeth(a,b,c){const p=a+b-c,pa=Math.abs(p-a),pb=Math.abs(p-b),pc=Math.abs(p-c);return pa<=pb&&pa<=pc?a:pb<=pc?b:c;}
+  let pos = 0;
+  for (let y = 0; y < height; y++) {
+    const filter = raw[pos++];
+    const rowRaw = raw.slice(pos, pos + stride); pos += stride;
+    const row = new Uint8Array(stride);
+    const prev = y > 0 ? out.slice((y-1)*stride, y*stride) : new Uint8Array(stride);
+    const bpp = Math.max(1, Math.floor(bitDepth * channels / 8));
+    for (let i = 0; i < stride; i++) {
+      const x=rowRaw[i],a=i>=bpp?row[i-bpp]:0,b=prev[i],c=i>=bpp?prev[i-bpp]:0;
+      switch(filter){case 0:row[i]=x;break;case 1:row[i]=(x+a)&0xFF;break;case 2:row[i]=(x+b)&0xFF;break;
+        case 3:row[i]=(x+((a+b)>>1))&0xFF;break;case 4:row[i]=(x+paeth(a,b,c))&0xFF;break;default:row[i]=x;}
     }
-    return ord.map(k=>map.get(k));
+    out.set(row, y * stride);
   }
+  return out;
+}
 
-  function loadFile(file){
-    const url=URL.createObjectURL(file),img=new Image();
-    img.onload=()=>{
-      cv.width=img.width;cv.height=img.height;
-      ctx.drawImage(img,0,0);
-      wd=new ImageData(new Uint8ClampedArray(ctx.getImageData(0,0,img.width,img.height).data),img.width,img.height);
-      pal=extractPal(wd);selIdx=-1;hlIdx=-1;
-      renderPal();noImg.style.display='none';cw.style.display='inline-block';
-      setIZ(Math.min(vp.clientWidth/cv.width,vp.clientHeight/cv.height,1));
-      document.getElementById('saveImgBtn').disabled=false;
-      document.getElementById('saveActBtn').disabled=false;
-      document.getElementById('palTitle').textContent='Palette ('+pal.length+')';
-      URL.revokeObjectURL(url);
-    };
-    img.src=url;
-  }
-
-  function renderPal(){
-    palList.innerHTML='';
-    pal.forEach((c,i)=>{
-      const d=document.createElement('div');
-      d.className='swatch'+(i===selIdx?' active':'')+(i===hlIdx&&i!==selIdx?' hl':'');
-      if(pZoom!==1){d.style.transform='scale('+pZoom+')';d.style.transformOrigin='top left';d.style.marginBottom=(2+(pZoom-1)*38)+'px';}
-      const hex=rgb2hex(c.r,c.g,c.b);
-      d.innerHTML='<div class="sw-color" style="background:'+hex+'"></div>'
-        +'<div style="flex:1;min-width:0"><div class="sw-hex">'+hex+'</div><div class="sw-rgb">rgb('+c.r+','+c.g+','+c.b+')</div></div>'
-        +'<div class="sw-idx">#'+i+'</div>';
-      d.addEventListener('click',()=>selColor(i));
-      d.addEventListener('mouseenter',()=>hlColor(i));
-      d.addEventListener('mouseleave',()=>hlColor(-1));
-      palList.appendChild(d);
-    });
-  }
-
-  function hlColor(i){hlIdx=i;renderCv();document.querySelectorAll('.swatch').forEach((el,j)=>el.classList.toggle('hl',j===i&&i!==selIdx));}
-
-  function selColor(i){
-    selIdx=i;renderPal();renderCv();
-    if(i>=0){
-      const c=pal[i],hex=rgb2hex(c.r,c.g,c.b);
-      hexIn.value=hex;rIn.value=c.r;gIn.value=c.g;bIn.value=c.b;cpick.value=hex;prev.style.background=hex;
-      ed.classList.add('open');
-      const el=palList.children[i];if(el)el.scrollIntoView({block:'nearest',behavior:'smooth'});
-    } else ed.classList.remove('open');
-  }
-
-  function renderCv(){
-    if(!wd)return;
-    const disp=new ImageData(new Uint8ClampedArray(wd.data),wd.width,wd.height),dd=disp.data;
-    const ai=hlIdx>=0?hlIdx:selIdx;
-    if(ai>=0){
-      const ac=pal[ai];
-      for(let i=0;i<dd.length;i+=4)
-        if(dd[i]===ac.r&&dd[i+1]===ac.g&&dd[i+2]===ac.b){dd[i]=Math.min(255,dd[i]+80);dd[i+1]=Math.min(255,dd[i+1]+80);dd[i+2]=Math.min(255,dd[i+2]+80);}
+function extractIndices(pixelData, width, height, bitDepth) {
+  const indices = new Uint8Array(width * height);
+  const stride = Math.ceil(width * bitDepth / 8);
+  let pi = 0;
+  for (let y = 0; y < height; y++) {
+    const rowStart = y * stride;
+    for (let x = 0; x < width; x++) {
+      let idx = 0;
+      if (bitDepth===8) { idx=pixelData[rowStart+x]; }
+      else if (bitDepth===4) { const b=pixelData[rowStart+Math.floor(x/2)]; idx=x%2===0?(b>>4):(b&0xF); }
+      else if (bitDepth===2) { const b=pixelData[rowStart+Math.floor(x/4)]; idx=(b>>(6-(x%4)*2))&0x3; }
+      else if (bitDepth===1) { const b=pixelData[rowStart+Math.floor(x/8)]; idx=(b>>(7-(x%8)))&0x1; }
+      indices[pi++] = idx;
     }
-    ctx.putImageData(disp,0,0);
   }
+  return indices;
+}
 
-  function applyChange(r,g,b){
-    if(selIdx<0)return;
-    const oc=pal[selIdx],d=wd.data;
-    for(let i=0;i<d.length;i+=4)if(d[i]===oc.r&&d[i+1]===oc.g&&d[i+2]===oc.b){d[i]=r;d[i+1]=g;d[i+2]=b;}
-    pal[selIdx]={r,g,b};
-    const hex=rgb2hex(r,g,b);
-    hexIn.value=hex;rIn.value=r;gIn.value=g;bIn.value=b;cpick.value=hex;prev.style.background=hex;
-    renderCv();
-    const el=palList.children[selIdx];
-    if(el){el.querySelector('.sw-color').style.background=hex;el.querySelector('.sw-hex').textContent=hex;el.querySelector('.sw-rgb').textContent='rgb('+r+','+g+','+b+')';}
+async function loadFile(file) {
+  originalFilename = file.name.replace(/\.png$/i, '');
+  setStatus('Loading…');
+  try {
+    const info = await parsePNG(file);
+    const { width, height, bitDepth, colorType, plte, idatChunks } = info;
+    imgW = width; imgH = height;
+    if (colorType === 3 && plte.length > 0) {
+      const rawPixels = await decompressIDAT(idatChunks);
+      const pixelData = unfilter(rawPixels, width, height, bitDepth, 1);
+      indexMap = extractIndices(pixelData, width, height, bitDepth);
+      pal = plte.map(c => ({...c}));
+      setStatus(`Indexed PNG — ${pal.length} colors, ${width}×${height} — palette order preserved`);
+    } else {
+      const url = URL.createObjectURL(file);
+      await new Promise((res,rej) => {
+        const img = new Image();
+        img.onload = () => { canvas.width=width; canvas.height=height; ctx.drawImage(img,0,0); URL.revokeObjectURL(url); res(); };
+        img.onerror = rej; img.src = url;
+      });
+      const imgData = ctx.getImageData(0,0,width,height); const d = imgData.data;
+      const colorToIdx = new Map(); pal = []; indexMap = new Uint8Array(width*height);
+      for (let i = 0; i < width*height; i++) {
+        const r=d[i*4],g=d[i*4+1],b=d[i*4+2],key=(r<<16)|(g<<8)|b;
+        if (!colorToIdx.has(key)) { colorToIdx.set(key, pal.length); pal.push({r,g,b}); }
+        indexMap[i] = colorToIdx.get(key);
+      }
+      setStatus(`Non-indexed PNG — ${pal.length} unique colors, ${width}×${height}`);
+    }
+    imgLabel.textContent = `Image  ${width}×${height}`;
+    palLabel.textContent = `Palette  (${pal.length})`;
+    redrawCanvas(); dropZone.style.display = 'none'; fitImage();
+    renderPalette(); savePngBtn.disabled=false; saveActBtn.disabled=false;
+    selectedSlot=null; editor.classList.add('hidden');
+  } catch(e) { setStatus('Error: '+e.message); console.error(e); }
+}
+
+function redrawCanvas(highlightSlot=null) {
+  canvas.width=imgW; canvas.height=imgH;
+  if (!indexMap) return;
+  const imgData=ctx.createImageData(imgW,imgH); const d=imgData.data;
+  for (let i=0;i<imgW*imgH;i++) {
+    const slot=indexMap[i],c=pal[slot];
+    if (highlightSlot!==null&&slot!==highlightSlot) { d[i*4]=c.r>>1;d[i*4+1]=c.g>>1;d[i*4+2]=c.b>>1;d[i*4+3]=255; }
+    else { d[i*4]=c.r;d[i*4+1]=c.g;d[i*4+2]=c.b;d[i*4+3]=255; }
   }
+  ctx.putImageData(imgData,0,0);
+}
 
-  document.getElementById('applyBtn').addEventListener('click',()=>
-    applyChange(Math.max(0,Math.min(255,+rIn.value||0)),Math.max(0,Math.min(255,+gIn.value||0)),Math.max(0,Math.min(255,+bIn.value||0))));
+function applyZoom(){canvas.style.width=Math.round(imgW*imgZoom)+'px';canvas.style.height=Math.round(imgH*imgZoom)+'px';}
+function fitImage(){const vw=imgVP.clientWidth-16,vh=imgVP.clientHeight-16;imgZoom=Math.min(vw/imgW,vh/imgH,1);applyZoom();}
 
-  hexIn.addEventListener('keydown',e=>{
-    if(e.key==='Enter'){let h=hexIn.value.trim();if(!h.startsWith('#'))h='#'+h;
-      if(/^#[0-9a-fA-F]{6}$/.test(h)){const[r,g,b]=hex2rgb(h);rIn.value=r;gIn.value=g;bIn.value=b;applyChange(r,g,b);}}
-  });
-  cpick.addEventListener('input',()=>{
-    const[r,g,b]=hex2rgb(cpick.value);rIn.value=r;gIn.value=g;bIn.value=b;
-    hexIn.value=cpick.value.toUpperCase();prev.style.background=cpick.value;applyChange(r,g,b);
-  });
-  [rIn,gIn,bIn].forEach(inp=>inp.addEventListener('input',()=>{
-    const r=+rIn.value||0,g=+gIn.value||0,b=+bIn.value||0,hex=rgb2hex(r,g,b);
-    hexIn.value=hex;cpick.value=hex;prev.style.background=hex;
-  }));
+document.getElementById('img-zoom-in').onclick=()=>{imgZoom=Math.min(imgZoom*1.25,32);applyZoom();};
+document.getElementById('img-zoom-out').onclick=()=>{imgZoom=Math.max(imgZoom/1.25,0.05);applyZoom();};
+document.getElementById('img-fit').onclick=fitImage;
+document.getElementById('img-zoom-1').onclick=()=>{imgZoom=1;applyZoom();};
+imgVP.addEventListener('wheel',e=>{if(!indexMap)return;e.preventDefault();imgZoom=Math.max(0.05,Math.min(32,imgZoom*(e.deltaY<0?1.1:0.9)));applyZoom();},{passive:false});
 
-  cv.addEventListener('click',e=>{
-    if(!wd)return;
-    const rc=cv.getBoundingClientRect(),x=Math.floor((e.clientX-rc.left)/iZoom),y=Math.floor((e.clientY-rc.top)/iZoom);
-    if(x<0||y<0||x>=cv.width||y>=cv.height)return;
-    const i=(y*cv.width+x)*4;
-    selColor(pal.findIndex(c=>c.r===wd.data[i]&&c.g===wd.data[i+1]&&c.b===wd.data[i+2]));
-  });
-  cv.addEventListener('mousemove',e=>{
-    if(!wd)return;
-    const rc=cv.getBoundingClientRect(),x=Math.floor((e.clientX-rc.left)/iZoom),y=Math.floor((e.clientY-rc.top)/iZoom);
-    if(x<0||y<0||x>=cv.width||y>=cv.height){hlColor(-1);return;}
-    const i=(y*cv.width+x)*4;
-    hlColor(pal.findIndex(c=>c.r===wd.data[i]&&c.g===wd.data[i+1]&&c.b===wd.data[i+2]));
-  });
-  cv.addEventListener('mouseleave',()=>hlColor(-1));
+function getCanvasCoords(e){const r=canvas.getBoundingClientRect();return{x:Math.floor((e.clientX-r.left)/imgZoom),y:Math.floor((e.clientY-r.top)/imgZoom)};}
 
-  function setIZ(z){
-    iZoom=Math.max(0.05,Math.min(32,z));
-    cw.style.transform='scale('+iZoom+')';cw.style.transformOrigin='top left';
-    cw.style.marginBottom=((cv.height*iZoom)-cv.height)+'px';
-    cw.style.marginRight=((cv.width*iZoom)-cv.width)+'px';
-    iZoomLbl.textContent=Math.round(iZoom*100)+'%';
+canvas.addEventListener('mousemove',e=>{
+  if(!indexMap)return;const{x,y}=getCanvasCoords(e);
+  if(x<0||x>=imgW||y<0||y>=imgH){pixelInfo.style.display='none';return;}
+  const slot=indexMap[y*imgW+x],c=pal[slot];
+  pixelInfo.style.display='block';pixelInfo.textContent=`x:${x} y:${y}  slot:${slot}  rgb(${c.r},${c.g},${c.b})`;
+  hoveredSlot=slot;
+  document.querySelectorAll('.swatch-row').forEach((row,i)=>{row.classList.toggle('highlighted',i===slot);if(i===slot)row.scrollIntoView({block:'nearest'});});
+});
+canvas.addEventListener('mouseleave',()=>{pixelInfo.style.display='none';hoveredSlot=null;document.querySelectorAll('.swatch-row').forEach(r=>r.classList.remove('highlighted'));});
+canvas.addEventListener('click',e=>{if(!indexMap)return;const{x,y}=getCanvasCoords(e);if(x<0||x>=imgW||y<0||y>=imgH)return;selectSlot(indexMap[y*imgW+x]);});
+
+function renderPalette(){
+  palList.innerHTML='';
+  pal.forEach((c,i)=>{
+    const row=document.createElement('div');
+    row.className='swatch-row'+(i===selectedSlot?' active':''); row.dataset.idx=i;
+    const hex=rgbToHex(c);
+    row.innerHTML=`<div class="swatch" style="background:${hex};width:${palSwatchSize}px;height:${palSwatchSize}px"></div><div class="swatch-info"><div class="swatch-hex">${hex}</div><div class="swatch-rgb">rgb(${c.r}, ${c.g}, ${c.b})</div><div class="swatch-idx">slot ${i}</div></div>`;
+    row.addEventListener('mouseenter',()=>{hoveredSlot=i;redrawCanvas(i);});
+    row.addEventListener('mouseleave',()=>{hoveredSlot=null;redrawCanvas(selectedSlot);});
+    row.addEventListener('click',()=>selectSlot(i));
+    palList.appendChild(row);
+  });
+}
+
+function updateSwatchRow(slot){
+  const row=palList.querySelector(`.swatch-row[data-idx="${slot}"]`); if(!row)return;
+  const c=pal[slot],hex=rgbToHex(c);
+  row.querySelector('.swatch').style.background=hex;
+  row.querySelector('.swatch-hex').textContent=hex;
+  row.querySelector('.swatch-rgb').textContent=`rgb(${c.r}, ${c.g}, ${c.b})`;
+}
+
+document.getElementById('pal-zoom-in').onclick=()=>{palSwatchSize=Math.min(palSwatchSize+4,80);renderPalette();};
+document.getElementById('pal-zoom-out').onclick=()=>{palSwatchSize=Math.max(palSwatchSize-4,14);renderPalette();};
+
+function selectSlot(slot){
+  selectedSlot=slot;
+  document.querySelectorAll('.swatch-row').forEach((row,i)=>row.classList.toggle('active',i===slot));
+  const activeRow=palList.querySelector('.swatch-row.active'); if(activeRow)activeRow.scrollIntoView({block:'nearest'});
+  openEditor(slot); redrawCanvas(slot);
+}
+
+function openEditor(slot){edTitle.textContent=`Edit slot ${slot}`;editor.classList.remove('hidden');syncEditorFromSlot(slot);}
+function syncEditorFromSlot(slot){const c=pal[slot],hex=rgbToHex(c);edHex.value=hex;edPicker.value=hex;edR.value=c.r;edG.value=c.g;edB.value=c.b;edPreview.style.background=hex;}
+function applyColorToSlot(slot,r,g,b){pal[slot]={r,g,b};updateSwatchRow(slot);edPreview.style.background=rgbToHex({r,g,b});redrawCanvas(slot);}
+
+edHex.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const c=hexToRgb(edHex.value);if(!c)return;edPicker.value=rgbToHex(c);edR.value=c.r;edG.value=c.g;edB.value=c.b;applyColorToSlot(selectedSlot,c.r,c.g,c.b);});
+edPicker.addEventListener('input',()=>{const c=hexToRgb(edPicker.value);if(!c)return;edHex.value=edPicker.value.toUpperCase();edR.value=c.r;edG.value=c.g;edB.value=c.b;applyColorToSlot(selectedSlot,c.r,c.g,c.b);});
+edApply.addEventListener('click',()=>{const r=clamp(parseInt(edR.value)||0,0,255),g=clamp(parseInt(edG.value)||0,0,255),b=clamp(parseInt(edB.value)||0,0,255);edR.value=r;edG.value=g;edB.value=b;const hex=rgbToHex({r,g,b});edHex.value=hex;edPicker.value=hex;applyColorToSlot(selectedSlot,r,g,b);});
+[edR,edG,edB].forEach(inp=>inp.addEventListener('input',()=>{const r=clamp(parseInt(edR.value)||0,0,255),g=clamp(parseInt(edG.value)||0,0,255),b=clamp(parseInt(edB.value)||0,0,255);edPreview.style.background=rgbToHex({r,g,b});edHex.value=rgbToHex({r,g,b});edPicker.value=rgbToHex({r,g,b});}));
+
+savePngBtn.addEventListener('click',()=>{
+  const doReverse=reverseChk.checked;
+  let workPal=[...pal],workMap=indexMap;
+  if(doReverse){const n=pal.length,remap=new Uint8Array(n);for(let i=0;i<n;i++)remap[i]=n-1-i;workPal=pal.slice().reverse();workMap=new Uint8Array(indexMap.length);for(let i=0;i<indexMap.length;i++)workMap[i]=remap[indexMap[i]];}
+  downloadBlob(new Blob([buildIndexedPNG(imgW,imgH,workPal,workMap)],{type:'image/png'}),originalFilename+'_edited.png');
+});
+
+function buildIndexedPNG(w,h,palette,pixelIndices){
+  const n=palette.length,bitDepth=n<=2?1:n<=4?2:n<=16?4:8;
+  const stride=Math.ceil(w*bitDepth/8),raw=new Uint8Array(h*(1+stride));
+  let pos=0;
+  for(let y=0;y<h;y++){
+    raw[pos++]=0;
+    if(bitDepth===8){for(let x=0;x<w;x++)raw[pos++]=pixelIndices[y*w+x];}
+    else{let byte=0,bitsWritten=0;for(let x=0;x<w;x++){const idx=pixelIndices[y*w+x];
+      if(bitDepth===4){byte=x%2===0?(idx<<4):byte|idx;if(x%2===1||x===w-1){raw[pos++]=byte;byte=0;}}
+      else if(bitDepth===2){byte|=(idx&0x3)<<(6-bitsWritten);bitsWritten+=2;if(bitsWritten===8||x===w-1){raw[pos++]=byte;byte=0;bitsWritten=0;}}
+      else{byte|=(idx&0x1)<<(7-bitsWritten);bitsWritten++;if(bitsWritten===8||x===w-1){raw[pos++]=byte;byte=0;bitsWritten=0;}}}}
   }
-  function setPZ(z){pZoom=Math.max(0.5,Math.min(2,z));pZoomLbl.textContent=Math.round(pZoom*100)+'%';renderPal();}
+  const compressed=deflateSync(raw),chunks=[];
+  const ihdr=new Uint8Array(13);new DataView(ihdr.buffer).setUint32(0,w);new DataView(ihdr.buffer).setUint32(4,h);ihdr[8]=bitDepth;ihdr[9]=3;
+  chunks.push(makeChunk('IHDR',ihdr));
+  const plteData=new Uint8Array(palette.length*3);for(let i=0;i<palette.length;i++){plteData[i*3]=palette[i].r;plteData[i*3+1]=palette[i].g;plteData[i*3+2]=palette[i].b;}
+  chunks.push(makeChunk('PLTE',plteData));chunks.push(makeChunk('IDAT',compressed));chunks.push(makeChunk('IEND',new Uint8Array(0)));
+  const sig=new Uint8Array([137,80,78,71,13,10,26,10]),out=new Uint8Array(sig.length+chunks.reduce((s,c)=>s+c.length,0));
+  let off=0;out.set(sig,off);off+=sig.length;for(const c of chunks){out.set(c,off);off+=c.length;}return out;
+}
 
-  document.getElementById('iZoomIn').addEventListener('click',()=>setIZ(iZoom*1.25));
-  document.getElementById('iZoomOut').addEventListener('click',()=>setIZ(iZoom/1.25));
-  document.getElementById('iZoomFit').addEventListener('click',()=>{if(wd)setIZ(Math.min(vp.clientWidth/cv.width,vp.clientHeight/cv.height,1));});
-  document.getElementById('pZoomIn').addEventListener('click',()=>setPZ(pZoom+0.25));
-  document.getElementById('pZoomOut').addEventListener('click',()=>setPZ(pZoom-0.25));
+function deflateSync(data){
+  const BSIZE=65535,blocks=Math.ceil(data.length/BSIZE)||1,out=[];
+  out.push(0x78,0x9C);let pos=0;
+  for(let b=0;b<blocks;b++){const isLast=b===blocks-1,chunk=data.slice(pos,pos+BSIZE),len=chunk.length;pos+=len;
+    out.push(isLast?0x01:0x00,len&0xFF,(len>>8)&0xFF,(~len)&0xFF,((~len)>>8)&0xFF);for(let i=0;i<len;i++)out.push(chunk[i]);}
+  let s1=1,s2=0;for(let i=0;i<data.length;i++){s1=(s1+data[i])%65521;s2=(s2+s1)%65521;}
+  const adler=(s2<<16)|s1;out.push((adler>>>24)&0xFF,(adler>>>16)&0xFF,(adler>>>8)&0xFF,adler&0xFF);
+  return new Uint8Array(out);
+}
 
-  const openFile=()=>document.getElementById('fileInput').click();
-  document.getElementById('openBtn').addEventListener('click',openFile);
-  document.getElementById('openBtn2').addEventListener('click',openFile);
-  document.getElementById('fileInput').addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0]);e.target.value='';});
+function makeChunk(type,data){
+  const len=data.length,chunk=new Uint8Array(4+4+len+4),dv=new DataView(chunk.buffer);
+  dv.setUint32(0,len);chunk[4]=type.charCodeAt(0);chunk[5]=type.charCodeAt(1);chunk[6]=type.charCodeAt(2);chunk[7]=type.charCodeAt(3);
+  chunk.set(data,8);dv.setInt32(8+len,crc32(chunk.slice(4,8+len)));return chunk;
+}
 
-  document.getElementById('saveImgBtn').addEventListener('click',()=>{
-    if(!wd)return;ctx.putImageData(wd,0,0);
-    const a=document.createElement('a');a.download='edited.png';a.href=cv.toDataURL('image/png');a.click();renderCv();
-  });
-  document.getElementById('saveActBtn').addEventListener('click',()=>{
-    if(!pal.length)return;
-    let cols=[...pal];if(document.getElementById('reverseAct').checked)cols.reverse();
-    const buf=new Uint8Array(768),n=Math.min(256,cols.length);
-    for(let i=0;i<n;i++){buf[i*3]=cols[i].r;buf[i*3+1]=cols[i].g;buf[i*3+2]=cols[i].b;}
-    const a=document.createElement('a');a.download='palette.act';
-    a.href=URL.createObjectURL(new Blob([buf],{type:'application/octet-stream'}));a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
-  });
+const CRC_TABLE=(()=>{const t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[i]=c;}return t;})();
+function crc32(data){let crc=0xFFFFFFFF;for(let i=0;i<data.length;i++)crc=CRC_TABLE[(crc^data[i])&0xFF]^(crc>>>8);return(crc^0xFFFFFFFF)|0;}
 
-  vp.addEventListener('wheel',e=>{if(!wd)return;e.preventDefault();setIZ(iZoom*(e.deltaY>0?0.9:1.1));},{passive:false});
-})();
+saveActBtn.addEventListener('click',()=>{
+  const workPal=reverseChk.checked?[...pal].reverse():[...pal];
+  const act=new Uint8Array(768);for(let i=0;i<Math.min(workPal.length,256);i++){act[i*3]=workPal[i].r;act[i*3+1]=workPal[i].g;act[i*3+2]=workPal[i].b;}
+  downloadBlob(new Blob([act],{type:'application/octet-stream'}),originalFilename+'_palette.act');
+});
+
+fileInput.addEventListener('change',e=>{const f=e.target.files[0];if(f)loadFile(f);fileInput.value='';});
+imgVP.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('active');});
+imgVP.addEventListener('dragleave',()=>dropZone.classList.remove('active'));
+imgVP.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('active');const f=e.dataTransfer.files[0];if(f&&f.type==='image/png')loadFile(f);});
+
+function rgbToHex({r,g,b}){return'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase();}
+function hexToRgb(hex){const m=hex.replace('#','').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);if(!m)return null;return{r:parseInt(m[1],16),g:parseInt(m[2],16),b:parseInt(m[3],16)};}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+function setStatus(msg){status.textContent=msg;}
+function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
 </script>
 </body>
 </html>
