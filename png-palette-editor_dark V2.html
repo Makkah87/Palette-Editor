@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Palette Editor</title>
+<title>PNG Palette Editor</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1063,11 +1063,20 @@ edApply.addEventListener('click',()=>{const r=clamp(parseInt(edR.value)||0,0,255
 [edR,edG,edB].forEach(inp=>inp.addEventListener('input',()=>{const r=clamp(parseInt(edR.value)||0,0,255),g=clamp(parseInt(edG.value)||0,0,255),b=clamp(parseInt(edB.value)||0,0,255);edPreview.style.background=rgbToHex({r,g,b});edHex.value=rgbToHex({r,g,b});edPicker.value=rgbToHex({r,g,b});}));
 
 // ── Save ───────────────────────────────────────────────────────────────────────
-savePngBtn.addEventListener('click',()=>{
+savePngBtn.addEventListener('click', async () => {
   const doReverse=reverseChk.checked;
   let workPal=[...pal],workMap=indexMap;
   if(doReverse){const n=pal.length,remap=new Uint8Array(n);for(let i=0;i<n;i++)remap[i]=n-1-i;workPal=pal.slice().reverse();workMap=new Uint8Array(indexMap.length);for(let i=0;i<indexMap.length;i++)workMap[i]=remap[indexMap[i]];}
-  downloadBlob(new Blob([buildIndexedPNG(imgW,imgH,workPal,workMap)],{type:'image/png'}),originalFilename+'_edited.png');
+  const blob = new Blob([buildIndexedPNG(imgW,imgH,workPal,workMap)], {type:'image/png'});
+  await saveBlob(blob, originalFilename+'_edited.png', [{description:'PNG Image',accept:{'image/png':['.png']}}]);
+});
+
+saveActBtn.addEventListener('click', async () => {
+  const workPal=reverseChk.checked?[...pal].reverse():[...pal];
+  const act=new Uint8Array(768);
+  for(let i=0;i<Math.min(workPal.length,256);i++){act[i*3]=workPal[i].r;act[i*3+1]=workPal[i].g;act[i*3+2]=workPal[i].b;}
+  const blob = new Blob([act], {type:'application/octet-stream'});
+  await saveBlob(blob, originalFilename+'_palette.act', [{description:'Photoshop Color Table',accept:{'application/octet-stream':['.act']}}]);
 });
 
 function buildIndexedPNG(w,h,palette,pixelIndices){
@@ -1110,12 +1119,6 @@ function makeChunk(type,data){
 const CRC_TABLE=(()=>{const t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[i]=c;}return t;})();
 function crc32(data){let crc=0xFFFFFFFF;for(let i=0;i<data.length;i++)crc=CRC_TABLE[(crc^data[i])&0xFF]^(crc>>>8);return(crc^0xFFFFFFFF)|0;}
 
-saveActBtn.addEventListener('click',()=>{
-  const workPal=reverseChk.checked?[...pal].reverse():[...pal];
-  const act=new Uint8Array(768);for(let i=0;i<Math.min(workPal.length,256);i++){act[i*3]=workPal[i].r;act[i*3+1]=workPal[i].g;act[i*3+2]=workPal[i].b;}
-  downloadBlob(new Blob([act],{type:'application/octet-stream'}),originalFilename+'_palette.act');
-});
-
 // ── File input / drag-drop (main) ──────────────────────────────────────────────
 fileInput.addEventListener('change',e=>{const f=e.target.files[0];if(f)loadFile(f);fileInput.value='';});
 imgVP.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('active');});
@@ -1127,7 +1130,27 @@ function rgbToHex({r,g,b}){return'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0
 function hexToRgb(hex){const m=hex.replace('#','').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);if(!m)return null;return{r:parseInt(m[1],16),g:parseInt(m[2],16),b:parseInt(m[3],16)};}
 function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
 function setStatus(msg){status.textContent=msg;}
-function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
+
+async function saveBlob(blob, suggestedName, types) {
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({ suggestedName, types });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch(e) {
+      if (e.name === 'AbortError') return; // user cancelled — do nothing
+      // any other error: fall through to legacy download
+    }
+  }
+  // Fallback for Firefox / Safari
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = suggestedName;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 </script>
 </body>
 </html>
